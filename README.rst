@@ -17,7 +17,7 @@ Usage
 
 Examples below show how to convert timestamps in ``hh:mm:ss`` and ``mm:ss`` format
 to iso8601 strings, integer seconds, datetime.timedelta objects and 
-(hours, minutes, seconds,) deltas
+(hours, minutes, seconds,) tuples
 
 .. code:: python
 
