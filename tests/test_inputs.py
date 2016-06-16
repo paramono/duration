@@ -175,21 +175,21 @@ class TestToSeconds(unittest.TestCase):
 class TestIsoInputs(unittest.TestCase):
 
     def test_int(self):
-        value = 5025  # seconds
+        value = 5010  # seconds
         iso8601 = to_iso8601(value)
-        self.assertEqual(iso8601, 'PT01H23M45S')
+        self.assertEqual(iso8601, 'PT01H23M30S')
 
     def test_tuple(self):
-        value = (1, 23, 45,)
+        value = (1, 23, 30,)
         iso8601 = to_iso8601(value)
-        self.assertEqual(iso8601, 'PT01H23M45S')
+        self.assertEqual(iso8601, 'PT01H23M30S')
 
     def test_str(self):
-        value = "1:23:45"
+        value = "1:23:30"
         iso8601 = to_iso8601(value)
-        self.assertEqual(iso8601, 'PT01H23M45S')
+        self.assertEqual(iso8601, 'PT01H23M30S')
 
     def test_timedelta(self):
-        value = timedelta(hours=1, minutes=23, seconds=45)
+        value = timedelta(hours=1, minutes=23, seconds=30)
         iso8601 = to_iso8601(value)
-        self.assertEqual(iso8601, 'PT01H23M45S')
+        self.assertEqual(iso8601, 'PT01H23M30S')

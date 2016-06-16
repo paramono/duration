@@ -132,8 +132,6 @@ def to_iso8601(value, strict=True, force_int=True):
         # 9 chars long w/leading 0, 6 digits after decimal
         seconds = '%09.6f' % seconds
 
-    # remove trailing zeros
-    seconds = seconds.rstrip('0')
     time += '{}S'.format(seconds)
     return 'P' + date + time
 
