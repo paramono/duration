@@ -20,21 +20,44 @@ class BaseInputsTest(BaseTest):
     Common test methods for each conversion function
     """
 
+    def setUp(self):
+        self.configure()
+        self.values = [
+            self.string, self.seconds,
+            self.timedelta, self.tuple_
+        ]
+        self.converters = {
+            'to_iso8601': (
+                to_iso8601, self.iso8601,
+            ),
+            'to_seconds': (
+                to_seconds, self.seconds,
+            ),
+            'to_timedelta': (
+                to_timedelta, self.timedelta,
+            ),
+            'to_tuple': (
+                to_tuple, self.tuple_,
+            )
+        }
+
+    def run_converter(self, name):
+        converter, correct_result = self.converters[name]
+        for value in self.values:
+            result = converter(value)
+            self.assertEqual(result, correct_result)
+
     def test_to_seconds(self):
-        seconds = to_seconds(self.string)
-        self.assertEqual(seconds, self.expected_seconds)
+        self.run_converter('to_seconds')
 
     def test_to_tuple(self):
-        tuple_ = to_tuple(self.string)
-        self.assertEqual(tuple_, self.expected_tuple)
+        self.run_converter('to_tuple')
 
     def test_to_timedelta(self):
-        td = to_timedelta(self.string)
-        self.assertEqual(td, self.expected_timedelta)
+        self.run_converter('to_timedelta')
 
     def test_to_iso8601(self):
-        iso8601 = to_iso8601(self.string)
-        self.assertEqual(iso8601, self.expected_iso8601)
+        self.run_converter('to_iso8601')
 
 
 class TestInvalidInputs(BaseTest, unittest.TestCase):
@@ -95,32 +118,78 @@ class TestNegativeInputs(BaseTest, unittest.TestCase):
 class TestZeroColonSeconds(BaseInputsTest, unittest.TestCase):
     """Checks inputs of 0:ss format"""
 
-    def setUp(self):
+    def configure(self):
         self.string = "0:25"
-        self.expected_seconds = 25
-        self.expected_timedelta = timedelta(seconds=25)
-        self.expected_tuple = (0, 0, 25,)
-        self.expected_iso8601 = 'PT25S'
+        self.seconds = 25
+        self.timedelta = timedelta(seconds=25)
+        self.tuple_ = (0, 0, 25,)
+        self.iso8601 = 'PT25S'
 
 
 class TestMinutesSeconds(BaseInputsTest, unittest.TestCase):
     """Checks inputs of mm:ss format"""
 
-    def setUp(self):
+    def configure(self):
         self.string = "3:47"
-        self.expected_seconds = 227
-        self.expected_timedelta = timedelta(seconds=227)
-        self.expected_tuple = (0, 3, 47,)
-        self.expected_iso8601 = 'PT03M47S'
+        self.seconds = 227
+        self.timedelta = timedelta(seconds=227)
+        self.tuple_ = (0, 3, 47,)
+        self.iso8601 = 'PT03M47S'
 
 
 class TestHoursMinutesSeconds(BaseInputsTest, unittest.TestCase):
     """Checks inputs of hh:mm:ss format"""
 
-    def setUp(self):
+    def configure(self):
         self.string = "1:23:45"
-        self.expected_seconds = 5025
-        self.expected_timedelta = timedelta(
+        self.seconds = 5025
+        self.timedelta = timedelta(
             hours=1, minutes=23, seconds=45)
-        self.expected_tuple = (1, 23, 45,)
-        self.expected_iso8601 = 'PT01H23M45S'
+        self.tuple_ = (1, 23, 45,)
+        self.iso8601 = 'PT01H23M45S'
+
+
+class TestToSeconds(unittest.TestCase):
+
+    def test_int(self):
+        value = 5025  # seconds
+        seconds = to_seconds(value)
+        self.assertEqual(seconds, value)
+
+    def test_tuple(self):
+        value = (1, 23, 45,)
+        seconds = to_seconds(value)
+        self.assertEqual(seconds, 5025)
+
+    def test_str(self):
+        value = "1:23:45"
+        seconds = to_seconds(value)
+        self.assertEqual(seconds, 5025)
+
+    def test_timedelta(self):
+        value = timedelta(hours=1, minutes=23, seconds=45)
+        seconds = to_seconds(value)
+        self.assertEqual(seconds, 5025)
+
+
+class TestIsoInputs(unittest.TestCase):
+
+    def test_int(self):
+        value = 5025  # seconds
+        iso8601 = to_iso8601(value)
+        self.assertEqual(iso8601, 'PT01H23M45S')
+
+    def test_tuple(self):
+        value = (1, 23, 45,)
+        iso8601 = to_iso8601(value)
+        self.assertEqual(iso8601, 'PT01H23M45S')
+
+    def test_str(self):
+        value = "1:23:45"
+        iso8601 = to_iso8601(value)
+        self.assertEqual(iso8601, 'PT01H23M45S')
+
+    def test_timedelta(self):
+        value = timedelta(hours=1, minutes=23, seconds=45)
+        iso8601 = to_iso8601(value)
+        self.assertEqual(iso8601, 'PT01H23M45S')

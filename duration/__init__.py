@@ -8,21 +8,11 @@ integers or seconds (integers)
 import re
 from datetime import timedelta
 
-
-class StrictnessError(ValueError):
-    """
-    raised when hours, minutes or seconds in duration string exceed
-    allowed values
-    """
-
-
-class NegativeDurationError(ValueError):
-    """
-    Raised when either hours, minutes or seconds in duration string
-    are negative. Used internally only, in safe_int as a safeguard,
-    since regular expression pattern does not take negative values
-    into consideration
-    """
+from .exceptions import (
+    StrictnessError,
+    WrongTupleSizeError,
+    NegativeDurationError,
+)
 
 
 def safe_int(value):
@@ -42,47 +32,75 @@ def safe_int(value):
     return result
 
 
-def _parse(string, strict=True):
+def _fix_tuple(tuple_):
+    hours, minutes, seconds = tuple_
+    seconds = hours*3600 + minutes*60 + seconds
+    minutes, seconds = divmod(seconds, 60)
+    hours, minutes = divmod(minutes, 60)
+    return (hours, minutes, seconds,)
+
+
+def _parse(value, strict=True):
     """
-    Preliminary duration string parser
+    Preliminary duration value parser
 
     strict=True (by default) raises StrictnessError if either hours,
-    minutes or seconds in duration string exceed allowed values
+    minutes or seconds in duration value exceed allowed values
     """
     pattern = r'(?:(?P<hours>\d+):)?(?P<minutes>\d+):(?P<seconds>\d+)'
-    match = re.match(pattern, string)
+    match = re.match(pattern, value)
     if not match:
-        raise ValueError('Invalid duration string: %s' % string)
+        raise ValueError('Invalid duration value: %s' % value)
     hours = safe_int(match.group('hours'))
     minutes = safe_int(match.group('minutes'))
     seconds = safe_int(match.group('seconds'))
 
-    if strict:
-        if hours > 23:
-            raise StrictnessError(
-                'Hours cannot have a value greater than 23 in strict mode'
-            )
-        if minutes > 59:
-            raise StrictnessError(
-                'Minutes cannot have a value greater than 59 in strict mode'
-            )
-        if seconds > 59:
-            raise StrictnessError(
-                'Seconds cannot have a value greater than 59 in strict mode'
-            )
+    check_tuple((hours, minutes, seconds,), strict)
+
     return (hours, minutes, seconds,)
 
 
-def to_iso8601(string, strict=True):
+def check_tuple(tuple_, strict=True):
+    if len(tuple_) != 3:
+        raise WrongTupleSizeError(
+            'Duration tuple size must be equal to 3! '
+            'Passed tuple has a length of %s' % len(tuple_)
+        )
+
+    if not strict:
+        return
+
+    hours, minutes, seconds = tuple_
+
+    if hours > 23:
+        raise StrictnessError(
+            'Hours cannot have a value greater than 23 in strict mode '
+            'You passed: %d hours' % hours
+        )
+    if minutes > 59:
+        raise StrictnessError(
+            'Minutes cannot have a value greater than 59 in strict mode '
+            'You passed: %d minutes' % minutes
+        )
+    if seconds > 59:
+        raise StrictnessError(
+            'Seconds cannot have a value greater than 59 in strict mode'
+            'You passed: %d seconds' % seconds
+        )
+
+
+def to_iso8601(value, strict=True, force_int=True):
     """
-    converts duration string to ISO8601 string
+    converts duration value to ISO8601 string
+    accepts integers, hh:mm:ss or mm:ss strings, timedelta objects
 
     strict=True (by default) raises StrictnessError if either hours,
     minutes or seconds in duration string exceed allowed values
     """
     # split seconds to larger units
     # seconds = value.total_seconds()
-    seconds = to_seconds(string, strict)
+    seconds = to_seconds(value, strict, force_int)
+
     minutes, seconds = divmod(seconds, 60)
     hours, minutes = divmod(minutes, 60)
     days, hours = divmod(hours, 24)
@@ -108,7 +126,7 @@ def to_iso8601(string, strict=True):
         time += '{:02}M'.format(minutes)
 
     # seconds
-    if isinstance(seconds, int):
+    if isinstance(seconds, int) or force_int:
         seconds = '{:02}'.format(int(seconds))
     else:
         # 9 chars long w/leading 0, 6 digits after decimal
@@ -120,40 +138,87 @@ def to_iso8601(string, strict=True):
     return 'P' + date + time
 
 
-def to_seconds(string, strict=True):
+def to_seconds(value, strict=True, force_int=True):
     """
-    converts duration string to integer seconds
+    converts duration value to integer seconds
 
     strict=True (by default) raises StrictnessError if either hours,
-    minutes or seconds in duration string exceed allowed values
+    minutes or seconds in duration value exceed allowed values
     """
-    hours, minutes, seconds = _parse(string, strict)
+    if isinstance(value, int):
+        return value  # assuming it's seconds
+    elif isinstance(value, timedelta):
+        seconds = value.total_seconds()
+        if force_int:
+            seconds = int(round(seconds))
+        return seconds
+    elif isinstance(value, str):
+        hours, minutes, seconds = _parse(value, strict)
+    elif isinstance(value, tuple):
+        check_tuple(value, strict)
+        hours, minutes, seconds = value
+    else:
+        raise TypeError(
+            'Value %s (type %s) not supported' % (
+                value, type(value).__name__
+            )
+        )
+
     if not (hours or minutes or seconds):
-        raise ValueError('No hours, minutes or seconds found in string')
+        raise ValueError('No hours, minutes or seconds found')
+
     result = hours*3600 + minutes*60 + seconds
     return result
 
 
-def to_timedelta(string, strict=True):
+def to_timedelta(value, strict=True):
     """
     converts duration string to timedelta
 
     strict=True (by default) raises StrictnessError if either hours,
     minutes or seconds in duration string exceed allowed values
     """
-    hours, minutes, seconds = _parse(string, strict)
+    if isinstance(value, int):
+        return timedelta(seconds=value)  # assuming it's seconds
+    elif isinstance(value, timedelta):
+        return value
+    elif isinstance(value, str):
+        hours, minutes, seconds = _parse(value, strict)
+    elif isinstance(value, tuple):
+        check_tuple(value, strict)
+        hours, minutes, seconds = value
+    else:
+        raise TypeError(
+            'Value %s (type %s) not supported' % (
+                value, type(value).__name__
+            )
+        )
     return timedelta(hours=hours, minutes=minutes, seconds=seconds)
 
 
-def to_tuple(string, strict=True):
+def to_tuple(value, strict=True, force_int=True):
     """
-    converts duration string to tuple of integers
+    converts duration value to tuple of integers
 
     strict=True (by default) raises StrictnessError if either hours,
-    minutes or seconds in duration string exceed allowed values
+    minutes or seconds in duration value exceed allowed values
     """
-    hours, minutes, seconds = _parse(string, strict)
-    seconds = hours*3600 + minutes*60 + seconds
-    minutes, seconds = divmod(seconds, 60)
-    hours, minutes = divmod(minutes, 60)
+    if isinstance(value, int):
+        seconds = value
+        minutes, seconds = divmod(seconds, 60)
+        hours, minutes = divmod(minutes, 60)
+    elif isinstance(value, str):
+        hours, minutes, seconds = _fix_tuple(
+            _parse(value, strict)
+        )
+    elif isinstance(value, tuple):
+        check_tuple(value, strict)
+        hours, minutes, seconds = _fix_tuple(value)
+    elif isinstance(value, timedelta):
+        seconds = value.total_seconds()
+        if force_int:
+            seconds = int(round(seconds))
+        minutes, seconds = divmod(seconds, 60)
+        hours, minutes = divmod(minutes, 60)
+
     return (hours, minutes, seconds,)

@@ -6,14 +6,14 @@ class BaseTest(object):
             )
         )
 
+    def test_to_iso8601(self):
+        self._raise_not_implemented('test_to_iso8601')
+
     def test_to_seconds(self):
         self._raise_not_implemented('test_to_seconds')
-
-    def test_to_tuple(self):
-        self._raise_not_implemented('test_to_tuple')
 
     def test_to_timedelta(self):
         self._raise_not_implemented('test_to_timedelta')
 
-    def test_to_iso8601(self):
-        self._raise_not_implemented('test_to_iso8601')
+    def test_to_tuple(self):
+        self._raise_not_implemented('test_to_tuple')
