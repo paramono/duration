@@ -57,6 +57,6 @@ To disable strict mode, pass ``strict=False`` to the conversion function
     time = '24:83:25'
 
     iso8601 = to_iso8601(time, strict=False) # 'P1DT01H23M25S'
-    seconds = to_seconds(time) # 91405
-    td = to_timedelta(time) # timedelta(seconds=91405)
-    tuple_ = to_tuple(time) # (25, 23, 25,)
+    seconds = to_seconds(time, strict=False) # 91405
+    td = to_timedelta(time, strict=False) # timedelta(seconds=91405)
+    tuple_ = to_tuple(time, strict=False) # (25, 23, 25,)
